@@ -1,5 +1,5 @@
 # Arduino-Beverage-Dispenser
-interface and control for a drink based vending machine. TEJ
+interface and control for a drink based vending machine. TEJ3M
 ## Explanation/Summary
 Grade 11 computer engineering project created by Eric Wei, Albert Tran, and Edward Golshenas. 
 The machine is operated by 2 Arduino's; one being in charge of LCD interface and RFID scanning and the other carrying out the pump commands and action. Features 3 drink options and sizes, as well as a card payment system recognizing unique and new users.
