@@ -1,1 +1,111 @@
+/*
+  TEJ3M - Summative pt 2.
+  Name: arduino_connection
+  Purpose: Deals with one way RFID signal as well as pump activation 
+           in conjunction with primary arduino.
+
+  @author Eric Wei
+
+  RFID code and library taken and modified from velleman website
+*/
+
+
+// RFID: library inclusion, pin numbers, rfid signal list, access signal
+#include <SPI.h>
+#include <RFID.h>
+
+#define SS_PIN 10
+#define RST_PIN 9
+
+RFID rfid(SS_PIN,RST_PIN);
+
+int serNum[5];
+int cards[][5] = {{226, 139, 172, 41, 236},{136,4,107,25,254}};  
+const int power = 5;
+bool access = false;
+
+
+// Pump pin assignment
+const int pump_one = 7;
+const int pump_two = 4;
+const int pump_one_signal = 8;
+const int pump_two_signal = 2;
+
+void setup(){
+
+    //RFID and Serial(for debugging) initialization 
+    Serial.begin(9600);
+    SPI.begin();
+    rfid.init();
+  
+    pinMode (pump_one, INPUT);
+    pinMode (pump_two, INPUT);
+    pinMode (pump_two_signal, OUTPUT);
+    pinMode (pump_one_signal, OUTPUT);
+    pinMode (power,OUTPUT);
+    digitalWrite (power,LOW);
+   
+}
+
+void loop(){
+
+    // Turns on and off pumps
+    if (digitalRead(pump_one) == HIGH){         // pump one
+      digitalWrite(pump_one_signal, HIGH);
+    }
+    else{
+      digitalWrite(pump_one_signal, LOW);
+    }
+    
+    if (digitalRead(pump_two) == HIGH){         // pump two
+      digitalWrite(pump_two_signal, HIGH);
+    }
+    else{
+      digitalWrite(pump_two_signal, LOW);
+    }
+
+    // send signal to other arduino if signal read is in cards list
+    if(rfid.isCard()){
+      
+        if(rfid.readCardSerial()){              // for debugging and testing
+            Serial.print(rfid.serNum[0]);
+            Serial.print(" ");
+            Serial.print(rfid.serNum[1]);
+            Serial.print(" ");
+            Serial.print(rfid.serNum[2]);
+            Serial.print(" ");
+            Serial.print(rfid.serNum[3]);
+            Serial.print(" ");
+            Serial.print(rfid.serNum[4]);
+            Serial.println("");
+
+            // checks if each rfid signal matches any list in "cards"
+            for(int x = 0; x < sizeof(cards); x++){
+              for(int i = 0; i < sizeof(rfid.serNum); i++ ){
+                  if(rfid.serNum[i] != cards[x][i]) {
+                      access = false;
+                      break;
+                  } else {
+                      access = true;
+                  }
+              }
+              if(access) break;
+            }
+           
+        }
+
+       // sends signal to primary arduino for lcd display initialization
+       if(access){
+           digitalWrite(power, HIGH);  
+       } 
+       else {
+           digitalWrite(power,LOW);
+           
+       }        
+    }
+    
+    
+    rfid.halt();
+
+}
 
