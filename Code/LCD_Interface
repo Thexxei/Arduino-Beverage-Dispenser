@@ -5,7 +5,6 @@
            connections to activate pump on secondary arduino
 
   @author Eric Wei
-
 */
 
 // include LCD library and sets interface pins with arduino pin numbers
