@@ -1,0 +1,258 @@
+/*
+  TEJ3M - Summative pt 1.
+  Name: Juice Dispenser
+  Purpose: Main project LCD interface using 3 buttons as well as one way 
+           connections to activate pump on secondary arduino
+
+  @author Eric Wei
+
+*/
+
+// include LCD library and sets interface pins with arduino pin numbers
+#include <LiquidCrystal.h>
+const int rs = 12, en = 11, d4 = 5, d5 = 4, d6 = 3, d7 = 2;
+LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
+
+// initialize menu manipulation and setup variables
+String menu = "welcome";
+int choice_size = 0;
+const String size_list[] = {"Small", "Medium", "Large"};
+const int size_length = 3;
+int choice_drink = 0;
+const String drink_list[] = {"Lemonade", "Crush", "Mix"};
+const int size_drink = 3;
+int left = 0;
+int right = 0;
+int enter = 0 ;
+int prev_left = 0;
+int prev_right = 0;
+int prev_enter = 0;
+
+// initialize pump and rfid signal pins, set timer for menu UI,
+//  initialize previous rfid signal for one time read
+const int rfid_input = 9;
+int prev_rfid = 0;
+const int pump_one = 13;
+const int pump_two = 8;
+int timer = 0;
+
+void setup() {
+  // set up the LCD's number of columns and rows:
+  lcd.begin(16, 2);
+  lcd.clear();
+  Serial.begin(9600);
+  
+  // set up the button pins as input
+  pinMode(A0, INPUT);
+  pinMode(A1, INPUT);
+  pinMode(A2, INPUT);
+  
+  // set up pump and rfid signal pins
+  pinMode(pump_one, OUTPUT);
+  pinMode(pump_two, OUTPUT);
+  pinMode(rfid_input, INPUT);
+}
+
+void loop() {
+
+  // checks buttons states
+  left = analogRead(A0);
+  right = analogRead(A1);
+  enter = analogRead(A2);
+
+  /*
+   * below is the main interface for user in relation to menu selection.
+   * screens are written in backwards chronological order in order to prevent skipping of screens without excessive code
+   * ACTIONS and DEFAULT DISPLAY sections are in different orders depending on screen due to each screen's unique features and problem written above
+   */
+  
+  // THANKS SCREEN
+  // display for user + buffer for multiple purchases
+  if (menu == "thanks"){
+    lcd.setCursor(0,0);
+    lcd.print("Thank you for");
+    lcd.setCursor(0,1);
+    lcd.print("your purchase!");
+    if (millis() > timer + 5000){                                     // checks for time passed without usage of delay()
+      lcd.clear();
+      menu = "welcome";
+    }
+  }
+  
+  // DISPENSING SCREEN
+  // display to indicate working pumps as well as actual pump control
+  if (menu == "dispensing"){
+    
+    // DEFAULT DISPLAY 
+    lcd.setCursor(0,0);
+    lcd.print("Dispensing...");
+    lcd.setCursor(0,1);
+    lcd.print("                ");
+    
+    // ACTIONS
+    // uses size and drink variables to determine pump controls
+    if (choice_drink == 0){
+      if (millis() < timer + 3000 + 3500*choice_size){
+        digitalWrite(pump_one, HIGH);
+      }
+      else{
+        digitalWrite(pump_one, LOW);
+        menu = "thanks";
+        timer = millis();
+      }
+    }
+    if (choice_drink == 1){
+      if (millis() < timer + 3000 + 3500*choice_size){
+        digitalWrite(pump_two, HIGH);
+      }
+      else{
+        digitalWrite(pump_two, LOW);
+        menu = "thanks";
+        timer = millis();
+      }
+    }
+    if (choice_drink == 2){
+      if (millis() < timer + (3000 + 3500*choice_size)/1.5){
+        digitalWrite(pump_one, HIGH);
+        digitalWrite(pump_two, HIGH);
+      }
+      else{
+        digitalWrite(pump_one, LOW);
+        digitalWrite(pump_two, LOW);
+        menu = "thanks";
+        timer = millis();
+      }
+    }
+   
+  }
+
+  // DRINK SCREEN
+  // provides user with drink options
+  if (menu == "drink"){
+    
+    // ACTIONS
+    // adjusts drink variable based on button press (mod 3)
+    if (prev_left == 0 and left > 0){
+      choice_drink += 1;
+        if (choice_drink == size_length){
+          choice_drink = 0;
+        }
+      lcd.clear();
+    }
+    if (prev_right == 0 and right > 0){
+      choice_drink -= 1;
+        if (choice_drink == -1){
+          choice_drink = 2;
+        }
+        lcd.clear();
+    }
+    if (prev_enter == 0 and enter > 0){
+      lcd.clear();
+      menu = "dispensing";
+      timer = millis();
+    }
+
+    // DEFAULT DISPLAY
+    lcd.setCursor(0,0);
+    lcd.print("Which Drink?");
+    if (choice_drink == 0){
+      lcd.setCursor(4,1);
+      lcd.print(drink_list[0]);
+    }
+    if (choice_drink == 1){
+      lcd.setCursor(5,1);
+      lcd.print(drink_list[1]);
+    }
+    if (choice_drink == 2){
+      lcd.setCursor(6 ,1);
+      lcd.print(drink_list[2]);
+    }
+    lcd.setCursor(1,1);
+    lcd.print("<");
+    lcd.setCursor(14,1);
+    lcd.print(">");
+  }
+
+  // SIZE SCREEN
+  // provides user with size options
+  if (menu == "size"){
+    
+    // ACTIONS
+    // adjusts size variable based on button press (mod 3)
+    if (prev_left == 0 and left > 0){
+        choice_size += 1;
+          if (choice_size == size_length){
+            choice_size = 0;
+          }
+        lcd.clear();
+    }
+    if (prev_right == 0 and right > 0){
+      choice_size -= 1;
+        if (choice_size == -1){
+          choice_size = 2;
+        }
+      lcd.clear();
+    }
+    if (prev_enter == 0 and enter > 0){
+      menu = "drink";
+      lcd.clear();
+    }
+    
+    // DEFAULT DISPLAY
+    lcd.setCursor(0,0);
+    lcd.print("Size?");
+    if (choice_size == 0){
+      lcd.setCursor(6,1);
+      lcd.print(size_list[0]);
+    }
+    if (choice_size == 1){
+      lcd.setCursor(5,1);
+      lcd.print(size_list[1]);
+    }
+    if (choice_size == 2){
+      lcd.setCursor(5,1);
+      lcd.print(size_list[2]);
+    }
+    lcd.setCursor(1,1);
+    lcd.print("<");
+    lcd.setCursor(14,1);
+    lcd.print(">");
+  }
+
+  //ACCEPTED SCREEN
+  //confirms rfid scan for user
+  if (menu == "accepted"){
+    lcd.setCursor(0,0);
+    lcd.print("Card");
+    lcd.setCursor(0,1);
+    lcd.print("Accepted!");
+    if (millis() > timer + 2000){                                     // checks for time passed without usage of delay()
+      lcd.clear(); 
+      menu = "size";
+    }
+  }
+
+  // WELCOME SCREEN
+  // default screen for user
+  if (menu == "welcome"){
+    lcd.setCursor(0,0);
+    lcd.print("Welcome!");
+    lcd.setCursor(0,1);
+    lcd.print("Please Tap");
+    if (prev_rfid == 0 and digitalRead(rfid_input) > 0){              // checks for rfid signal
+      lcd.clear();
+      menu = "accepted";
+      timer = millis();
+    }
+  }
+
+
+  
+
+  // sets up previous button states to measure changes for next loop
+  prev_rfid = digitalRead(rfid_input);
+  prev_right = right;
+  prev_left = left;
+  prev_enter = enter;
+  
+}
